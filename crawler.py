@@ -50,17 +50,14 @@ class Crawler():
             reader = csv.DictReader(csvfile)
             for row in reader:
                 url = self.fix_url(row['eprint'])
-                print(row['title'], url)
                 file_path = "downloads/"+self.url_name(url)
                 try:
                     with opener.open(url) as res:
                         content_type = res.info().get_content_subtype()
                         page = res.read()
                         if content_type == "html" and row['eprint'][0] != '/':
-                            print(res.info().get_content_type())
-                            print(res.geturl())
+                            print(row['title'], url)
                             page = self.html_to_pdf(page)
-
                     continue
                     with open(file_path, "wb") as fp:
                         fp.write(page)
@@ -75,10 +72,10 @@ class Crawler():
         html = ascii(page) #.decode("utf-8") not all pages are unicode
         finder = PDFFinder()
         finder.feed(html)
-        urls = list(finder.pdflist)
+        urls = finder.pdflink()
         if len(urls) > 1:
             pass# do something to identify real paper
-        print(finder.pdflist)
+        print(urls)
 
 
 

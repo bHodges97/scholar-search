@@ -31,7 +31,8 @@ class PDFFinder(HTMLParser):
                     self.pdflist.add(val)
 
 
-    def handle_data(self,data):
-        pass
-        #if "pdf" == data.lower()[:3] and self.tag == "a":
-        #    self.pdflist.append(self.attr[0][1])
+    def pdflink(self):
+        words = ["epdf","supplement","google"]
+        pdfs = [x for x in self.pdflist if all([y not in x.lower() for y in words])]
+        pdfs = [x for x in pdfs if pdfs[:2] != "//"]
+        return pdfs
