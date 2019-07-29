@@ -8,13 +8,17 @@ from pdffinder import PDFFinder
 from urllib.parse import urlparse
 
 
+import requests
+from requests.exceptions import TooManyRedirects
+
+
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 class Crawler():
     def __init__(self):
         #pretend to be browser to avoid 403 error
-        self.header = ('User-Agent','Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0')
-        self.headers = {self.header[0]:self.header[1]}
+        self.headers = {'User-Agent':'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0'}
         self.outfile = "out.csv"
 
     def url_name(self,url):
@@ -44,10 +48,7 @@ class Crawler():
                     break
 
     def download(self):
-        cj = http.cookiejar.CookieJar()
-        opener = build_opener(HTTPCookieProcessor(cj))
-        opener.addheaders = [self.header]
-        print(opener.addheaders)
+        self.jar = requests.cookies.RequestsCookieJar()
         with open(self.outfile) as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
@@ -57,13 +58,13 @@ class Crawler():
                 file_path = "downloads/"+self.url_name(url)
                 try:
                     print(row['title'])
-                    with opener.open(url) as res:
-                        content_type = res.info().get_content_subtype()
-                        page = res.read()
-                        if content_type == "html" and row['eprint'][0] != '/':
-                            page = self.html_to_pdf(page,opener,root)
-                        else:
-                            print("Download:",url)
+                    res = requests.get(url,headers=self.headers,cookies=self.jar) # set stream=True for chunk by chunk
+                    content_type = res.headers['content-Type']
+                    page = res.content
+                    if "html" in content_type and row['eprint'][0] != '/':
+                        page = self.html_to_pdf(page, root)
+                    else:
+                        print("Download:",url)
                     if page == None:
                         continue
                     with open(file_path, "wb") as fp:
@@ -73,8 +74,10 @@ class Crawler():
                     print("Error", err.code)
                 except ConnectionError as err:
                     print(err)
+                except TooManyRedirects as err:
+                    print(err)
 
-    def html_to_pdf(self,page,opener,root):
+    def html_to_pdf(self,page,root,depth=0):
         html = ascii(page) #.decode("utf-8") not all pages are unicode
         finder = PDFFinder()
         finder.feed(html)
@@ -84,14 +87,16 @@ class Crawler():
             return None
         elif url[0] == "/":
             url = root+url
-        print("Download:",url)
-        with opener.open(url) as res:
-            content_type = res.info().get_content_subtype()
-            page = res.read()
-            if content_type != "pdf":
+        print(url)
+        res = requests.get(url,headers=self.headers,cookies=self.jar)
+        content_type = res.headers['content-Type']
+        if "pdf" not in content_type:
+            if depth < 1:
+                return self.html_to_pdf(res.content,root,depth=1) #try again, some pages go to a redirect link
+            else:
                 print("Not pdf",content_type)
                 return None
-        return page
+        return res.content
 
 
 
