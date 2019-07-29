@@ -1,15 +1,12 @@
 import scholarly
 import csv
 import http.cookiejar
-from urllib.request import urlopen, Request, build_opener, HTTPCookieProcessor
 from urllib.error import HTTPError
 from os import walk
 from pdffinder import PDFFinder
 from urllib.parse import urlparse
-
-
-import requests
 from requests.exceptions import TooManyRedirects
+import requests
 
 
 
@@ -20,16 +17,6 @@ class Crawler():
         #pretend to be browser to avoid 403 error
         self.headers = {'User-Agent':'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0'}
         self.outfile = "out.csv"
-
-    def url_name(self,url):
-        if url[-1] == '/':
-            url = url[:-1]
-        return url.split('/')[-1]
-
-    def fix_url(self,url):
-        if url[0] == '/':
-            url = "https://scholar.google.co.uk" + url
-        return url
 
     def query(self,query,limit = 50):
         search_query = scholarly.search_pubs_query(query)
@@ -51,17 +38,19 @@ class Crawler():
         self.jar = requests.cookies.RequestsCookieJar()
         with open(self.outfile) as csvfile:
             reader = csv.DictReader(csvfile)
-            for row in reader:
-                url = self.fix_url(row['eprint'])
+            for idx,row in enumerate(reader):
+                if row['eprint'][0] == '/':
+                    print("Reading uni link")
+                    continue
                 parsed_uri = urlparse(url)
                 root = '{uri.scheme}://{uri.netloc}'.format(uri=parsed_uri)
-                file_path = "downloads/"+self.url_name(url)
+                file_path = "downloads/{:05d}.pdf".format(idx)
                 try:
                     print(row['title'])
                     res = requests.get(url,headers=self.headers,cookies=self.jar) # set stream=True for chunk by chunk
                     content_type = res.headers['content-Type']
                     page = res.content
-                    if "html" in content_type and row['eprint'][0] != '/':
+                    if "html" in content_type:
                         page = self.html_to_pdf(page, root)
                     else:
                         print("Download:",url)
