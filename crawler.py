@@ -3,7 +3,7 @@ import csv
 import http.cookiejar
 from urllib.error import HTTPError
 from os import walk
-from pdffinder import PDFFinder
+from pdffinder import *
 from urllib.parse import urlparse
 from requests.exceptions import TooManyRedirects
 import requests
@@ -40,6 +40,10 @@ class Crawler():
             reader = csv.DictReader(csvfile)
             for idx,row in enumerate(reader):
                 if row['eprint'][0] == '/':
+                    res = requests.get("https://scholar.google.co.uk"+url,headers=self.headers,cookies=self.jar)
+                    rg = ReadingUni()
+                    rg.feed(ascii(res.content))
+                    url = "http://zp2yn2et6f.scholar.serialssolutions.com/" + rg.link[1:]
                     print("Reading uni link")
                     continue
                 parsed_uri = urlparse(url)

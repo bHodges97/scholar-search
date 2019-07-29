@@ -1,8 +1,9 @@
 from html.parser import HTMLParser
 
-class LinkParser(HTMLParser):
+class ReadingUni(HTMLParser):
     def handle_starttag(self,tag,attr):
-        self.link = attr[0][1]
+        if tag == "a" and attr[0] == ("id","onClickExclude"):
+            self.link = attr[1][1]
 
 class PDFFinder(HTMLParser):
     def __init__(self):
@@ -45,4 +46,3 @@ class PDFFinder(HTMLParser):
         else:
             print("Can't guess correct link", pdfs)
             return ""
-
