@@ -3,7 +3,7 @@ crawler.py
   - download() loads out.csv and tries to download pdfs
 
 analyser.py
-  - list files in download
-  - files -> lowercase -> ascii -> tokenize -> remove stop words | 4.16 sec
-  - tokens -> count vectorise -> tfidf transform | 0.003 sec
-  - tfidf -> svd -> minibatch kmeans | 0.07 sec
+  - list files in download folder
+  - files -> lowercase -> ascii -> tokenize -> remove stop words -> count vectorise| 4.5 sec
+  - count vector -> tfidf transform -> svd| 0.02 sec
+  - svd -> minibatch kmeans | 0.03 sec
