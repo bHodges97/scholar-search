@@ -1,6 +1,6 @@
 from html.parser import HTMLParser
 
-class ReadingUni(HTMLParser):
+class LibraryLink(HTMLParser):
     def handle_starttag(self,tag,attr):
         if tag == "a" and attr[0] == ("id","onClickExclude"):
             self.link = attr[1][1]
