@@ -30,6 +30,11 @@ class PDFFinder(HTMLParser):
             for name,val in attr:
                 if name == "src":# and ".pdf" in val.lower():
                     self.pdflist.add(val)
+    def handle_data(self,data):
+        if data == "here" and self.tag == "a": #click here to redirect
+            for name,val in self.attr:
+                if name == "href":
+                    self.pdflist.add(val)
 
 
     def pdflink(self):

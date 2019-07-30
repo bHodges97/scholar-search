@@ -37,57 +37,63 @@ class Crawler():
         with open(self.outfile) as csvfile:
             reader = csv.DictReader(csvfile)
             for idx,row in enumerate(reader):
-                if row['eprint'][0] == '/':
-                    res = requests.get("https://scholar.google.co.uk"+url,headers=self.headers,cookies=self.jar)
-                    rg = LibraryLink()
-                    rg.feed(ascii(res.content))
-                    url = "http://zp2yn2et6f.scholar.serialssolutions.com/" + rg.link[1:]
-                    print("Library link")
+                print(row['title'])
+                url = row['eprint']
+                if url[0] == '/':
+                    #res = requests.get("https://scholar.google.co.uk"+url,headers=self.headers,cookies=self.jar)
+                    #rg = LibraryLink()
+                    #rg.feed(ascii(res.content))
+                    #url = "http://zp2yn2et6f.scholar.serialssolutions.com/" + rg.link[1:]
+                    #print("Library link")
                     continue
                 parsed_uri = urlparse(url)
                 root = '{uri.scheme}://{uri.netloc}'.format(uri=parsed_uri)
-                file_path = "downloads/{:05d}.pdf".format(idx)
+                file_path = f"downloads/{idx:05d}"
                 try:
-                    print(row['title'])
                     res = requests.get(url,headers=self.headers,cookies=self.jar) # set stream=True for chunk by chunk
-                    content_type = res.headers['content-Type']
-                    page = res.content
-                    if "html" in content_type:
-                        page = self.html_to_pdf(page, root)
-                    else:
-                        print("Download:",url)
-                    if page == None:
+                    content_type = Crawler.filetype(res.headers['content-Type'])
+                    if "html" == content_type:
+                        res = self.html_to_pdf(res, root)
+                    if res == None:
+                        print("Warning: failed to find PDF, skipping download",content_type)
                         continue
+                    extension = Crawler.filetype(res.headers['content-Type'])
+                    file_path = f"{file_path}.{extension}"
+                    print("Downloading:",url)
                     with open(file_path, "wb") as fp:
-                        fp.write(page)
-                        print("Success")
+                        fp.write(res.content)
                 except HTTPError as err:
                     print("Error", err.code)
-                except ConnectionError as err:
-                    print(err)
-                except TooManyRedirects as err:
+                except (ConnectionError, TooManyRedirects) as err:
                     print(err)
 
-    def html_to_pdf(self,page,root,depth=0):
-        html = ascii(page) #.decode("utf-8") not all pages are unicode
+    def html_to_pdf(self,res,root,depth=0):
+        #find pdf link in page
+        html = ascii(res.content) #.decode("utf-8") not all pages are unicode
         finder = PDFFinder()
         finder.feed(html)
         url = finder.pdflink()
         if url == "":
-            print("Download: Not found")
             return None
         elif url[0] == "/":
             url = root+url
-        print(url)
+
+        #try to download pdf
         res = requests.get(url,headers=self.headers,cookies=self.jar)
-        content_type = res.headers['content-Type']
-        if "pdf" not in content_type:
+        content_type = Crawler.filetype(res.headers['content-Type'])
+        if "html" == content_type:#link might be a redirect, search the page for link
             if depth < 1:
-                return self.html_to_pdf(res.content,root,depth=1) #try again, some pages go to a redirect link
+                print("Warning: PDF Link is redirect! retrying")
+                with open("redirect.html",'wb') as f:
+                    f.write(res.content)
+                return self.html_to_pdf(res,root,depth=1) #try again, some pages go to a redirect link
             else:
-                print("Not pdf",content_type)
                 return None
-        return res.content
+        else:
+            return res
+
+    def filetype(content_type):
+        return content_type.split(";")[0].split("/")[1].lower()
 
 
 
@@ -95,4 +101,4 @@ class Crawler():
 if __name__ == "__main__":
     c = Crawler()
     #c.query("hpc")
-    #c.download()
+    c.download()

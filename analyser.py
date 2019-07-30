@@ -13,6 +13,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 class Analyser():
     def analyse(self,clusters=5,verbose=False):
+        t0 = time()
         stopwords = frozenset(nltk_stopwords.words('english'))#very slow if not set
         filenames = [x for x in list(walk('downloads'))[0][2]]
         files = [f'downloads/{x}' for x in filenames]
@@ -24,23 +25,24 @@ class Analyser():
                 min_df=2,
                 max_features=10000)
         tf = vectorizer.fit_transform(files)
+        t1 = time()
         tfidfTransformer = TfidfTransformer()
         tfidf = tfidfTransformer.fit_transform(tf)
         svd = TruncatedSVD(n_components=2)
         reduced = svd.fit_transform(tfidf)
-        #km = MiniBatchKMeans(n_clusters=clusters, init='k-means++', n_init=1, init_size=1000, batch_size=1000, verbose=verbose)
-        km = KMeans(n_clusters=clusters, init='k-means++', max_iter=100, n_init=1, verbose=verbose)
+        t2 = time()
+        km = MiniBatchKMeans(n_clusters=clusters, init='k-means++', n_init=1, init_size=1000, batch_size=1000, verbose=verbose)
+        #km = KMeans(n_clusters=clusters, init='k-means++', max_iter=100, n_init=1, verbose=verbose)
         km.fit(reduced)
         centers = km.cluster_centers_
         y_kmeans = km.predict(reduced)
-        print(y_kmeans)
-        print(y_kmeans.shape,tfidf.shape)
-        print(centers)
+        t3 = time()
+        print(t3-t0,t1-t0,t2-t1,t3-t2)
         ax = plt.figure().add_subplot(111)#, projection='3d')
         ax.scatter(reduced[:, 0], reduced[:, 1], c=y_kmeans,  cmap='viridis')
         ax.scatter(centers[:, 0], centers[:, 1], c='red', marker='x', alpha=0.5);
         for i in range(40):
-            ax.annotate(filenames[i],reduced[i])
+            ax.annotate(filenames[i][3:],reduced[i])
         plt.show()
 
 
